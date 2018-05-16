@@ -13,6 +13,7 @@ def normal_moments_from_lognormal(m, v):
     """
     Returns mu and sigma of normal distribution
     underlying a lognormal with mean m and variance v
+    source: https://blogs.sas.com/content/iml/2014/06/04/simulate-lognormal-data-with-specified-mean-and-variance.html
     
     @m = mean of lognormal distribution
     @v = variance of lognormal distribution
@@ -21,6 +22,10 @@ def normal_moments_from_lognormal(m, v):
     mu = math.log(m**2/phi)
     sigma = math.sqrt(math.log(phi**2/m**2))
     return mu, sigma
+
+
+
+    
 
 
 class discrete_dist(object):

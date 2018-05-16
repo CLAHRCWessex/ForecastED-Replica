@@ -12,6 +12,19 @@ import numpy as np
 
 from Results import ResultsSingleton
 
+_trace = True
+
+def set_trace(print_trace):
+    global _trace 
+    _trace = print_trace
+
+
+def trace(msg):
+    if(_trace):
+        print(msg)
+        
+
+
 
 class ForecastED:
     """
@@ -29,6 +42,7 @@ class ForecastED:
         self.ed_cubicles = ed_cubicles
         self.init_results_collection()
         
+        
     
     def init_results_collection(self):
         self.run_results = {}
@@ -37,6 +51,7 @@ class ForecastED:
         ResultsSingleton().cubicle_queue = []
         ResultsSingleton().cubicle_service = []
         
+    
         
     
     def run(self, runtime):
@@ -45,6 +60,7 @@ class ForecastED:
         self.env.process(observe_queue(self.env, self.ed_cubicles, 10, ResultsSingleton().cubicle_queue)) 
         self.env.process(observe_service(self.env, self.ed_cubicles, 10, ResultsSingleton().cubicle_service))  
         self.env.run(until=runtime)
+        
         self.process_run_results()
     
     
@@ -127,7 +143,7 @@ class Patient:
         """A patient enteres the ED, waits for a treatment cubicle,
         has treatment and then leaves"""    
     
-        print('Patient {0} enters the ED at {1}'.format(self.identifer, 
+        trace('Patient {0} enters the ED at {1}'.format(self.identifer, 
               self.env.now))
     
         with self.ed_cubicles.request(priority=self.priority) as req:
@@ -138,14 +154,14 @@ class Patient:
             self.cubicle_wait = self.env.now - start_wait
             ResultsSingleton().cubicle_waits.append(self.cubicle_wait)
             
-            print('Patient {0}: starts treatment = {1} minutes;' 
+            trace('Patient {0}: starts treatment = {1} minutes;' 
                   + 'wait = {2}'.format(self.identifer,self.env.now, 
                             self.cubicle_wait))
             
             yield self.env.process(self.treat_proc.Treat())
             
             
-            print('Patient {0} leaves the ED at {1} minutes.'
+            trace('Patient {0} leaves the ED at {1} minutes.'
                   .format(self.identifer, self.env.now))
 
 
@@ -162,7 +178,7 @@ def observe_queue(env, res, interval, results):
    """
    for i in itertools.count():
        yield env.timeout(interval)
-       print('QUEUE LENGTH: {0}'.format(len(res.queue)))
+       trace('QUEUE LENGTH: {0}'.format(len(res.queue)))
        results.append(len(res.queue))
        
 
@@ -178,7 +194,7 @@ def observe_service(env, res, interval, results):
    """
    for i in itertools.count():
        yield env.timeout(interval)
-       print('IN SERVICE: {0}'.format(len(res.users)))
+       trace('IN SERVICE: {0}'.format(len(res.users)))
        results.append(len(res.users))
        
 
