@@ -11,6 +11,7 @@ import numpy as np
 
 
 
+
 class ForecastED:
     """
     ForecastED model
@@ -38,12 +39,17 @@ class ForecastED:
 
 
 class PatientSource:
+    """
+    Arrival of patients to the ED.
+    Patients are set a priority on arrival
     
-    def __init__(self, env, mean_IAT, ed_cubicles, treat_proc):
+    """
+    def __init__(self, env, mean_IAT, ed_cubicles, treat_proc, priority_dist):
         self.env = env
         self.mean_IAT = mean_IAT
         self.ed_cubicles = ed_cubicles
         self.treat_proc = treat_proc
+        self.priority_dist = priority_dist
         self.count = 0
         
         
@@ -51,8 +57,10 @@ class PatientSource:
         """Generate new patients that arrive at the ED."""
         for i in itertools.count():
             yield self.env.timeout(np.random.exponential(self.mean_IAT))
+
             
-            patient = Patient(self.env, i, self.ed_cubicles, self.treat_proc)
+            patient = Patient(self.env, i, self.ed_cubicles, self.treat_proc, 
+                              self.priority_dist.sample())
             
             self.env.process(patient.execute())
             self.count += 1    
@@ -81,12 +89,13 @@ class EvaluationAndTreatment:
 
 class Patient:
     
-    def __init__(self, env, identifer, ed_cubicles, treat_proc):
+    def __init__(self, env, identifer, ed_cubicles, treat_proc, priority=1):
         self.env = env
         self.arrival_time = env.now
         self.identifer = identifer
         self.ed_cubicles = ed_cubicles
         self.treat_proc = treat_proc
+        self.priority = priority
         
         
         
@@ -97,7 +106,7 @@ class Patient:
         print('Patient {0} enters the ED at {1}'.format(self.identifer, 
               self.env.now))
     
-        with self.ed_cubicles.request() as req:
+        with self.ed_cubicles.request(priority=self.priority) as req:
             start_wait = self.env.now
             # Request one of the ed cubicles for treatment
             yield req
@@ -126,3 +135,31 @@ def observe_service(env, res, interval):
    for i in itertools.count():
        yield env.timeout(interval)
        print('IN SERVICE: {0}'.format(len(res.users)))
+       
+
+
+class discrete_dist(object):
+    """
+    Encapsulates a discrete distribution
+    """
+    def __init__(self, elements, probabilities):
+        self.elements = elements
+        self.probabilities = probabilities
+        
+        self.validate_lengths(elements, probabilities)
+        self.validate_probs(probabilities)
+        
+        
+        
+    def validate_lengths(self, elements, probs):
+        if (len(elements) != len(probs)):
+            raise ValueError('Elements and probilities arguments must be of the same length')
+            
+    def validate_probs(self, probs):
+        if(sum(probs) != 1):
+            raise ValueError('Probabilities must sum to 1')
+        
+    def sample(self):
+        return np.random.choice(self.elements, p=self.probabilities)
+    
+    
