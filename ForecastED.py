@@ -10,6 +10,7 @@ import itertools
 import numpy as np
 
 
+from Results import ResultsSingleton
 
 
 class ForecastED:
@@ -26,15 +27,37 @@ class ForecastED:
         self.env = env
         self.source = source
         self.ed_cubicles = ed_cubicles
+        self.init_results_collection()
+        
+    
+    def init_results_collection(self):
+        self.run_results = {}
+        ResultsSingleton().cubicle_waits = []
+        ResultsSingleton().arrival_count = 0
+        ResultsSingleton().cubicle_queue = []
+        ResultsSingleton().cubicle_service = []
         
         
     
     def run(self, runtime):
         
         self.env.process(self.source.generate())
-        self.env.process(observe_queue(self.env, self.ed_cubicles, 10)) 
-        self.env.process(observe_service(self.env, self.ed_cubicles, 10))  
+        self.env.process(observe_queue(self.env, self.ed_cubicles, 10, ResultsSingleton().cubicle_queue)) 
+        self.env.process(observe_service(self.env, self.ed_cubicles, 10, ResultsSingleton().cubicle_service))  
         self.env.run(until=runtime)
+        self.process_run_results()
+    
+    
+    def process_run_results(self):
+        self.run_results['Arrivals'] = ResultsSingleton().arrival_count
+        self.run_results['Mean_Cubicle_Wait'] = np.array(ResultsSingleton().cubicle_waits).mean()
+        self.run_results['Std_Cubicle_Wait'] = np.array(ResultsSingleton().cubicle_waits).std()
+        self.run_results['Mean_Cubicle_Q'] = np.array(ResultsSingleton().cubicle_queue).mean()
+        self.run_results['Mean_Cubicle_Util'] = np.array(ResultsSingleton().cubicle_service).mean() / self.ed_cubicles.capacity
+    
+
+    def get_results(self):
+        return self.run_results
     
 
 
@@ -63,7 +86,8 @@ class PatientSource:
                               self.priority_dist.sample())
             
             self.env.process(patient.execute())
-            self.count += 1    
+            self.count += 1
+            ResultsSingleton().arrival_count += 1
         
         
         
@@ -112,6 +136,7 @@ class Patient:
             yield req
             
             self.cubicle_wait = self.env.now - start_wait
+            ResultsSingleton().cubicle_waits.append(self.cubicle_wait)
             
             print('Patient {0}: starts treatment = {1} minutes;' 
                   + 'wait = {2}'.format(self.identifer,self.env.now, 
@@ -125,41 +150,39 @@ class Patient:
 
 
 
-def observe_queue(env, res, interval):
+def observe_queue(env, res, interval, results):
+   """
+   Observe a queue for a resource at a specified interval and store 
+   results
+   
+   @env - Simpy environment
+   @res - resource to monitor
+   @interval - observation interval
+   @results - results list.  stores Q lengths
+   """
    for i in itertools.count():
        yield env.timeout(interval)
        print('QUEUE LENGTH: {0}'.format(len(res.queue)))
+       results.append(len(res.queue))
        
 
-def observe_service(env, res, interval):
+def observe_service(env, res, interval, results):
+   """
+   Observe a how many resources are in use at a specified interval and store 
+   results
+   
+   @env - Simpy environment
+   @res - resource to monitor
+   @interval - observation interval
+   @results - results list. Stores number of users of resource.
+   """
    for i in itertools.count():
        yield env.timeout(interval)
        print('IN SERVICE: {0}'.format(len(res.users)))
+       results.append(len(res.users))
        
 
 
-class discrete_dist(object):
-    """
-    Encapsulates a discrete distribution
-    """
-    def __init__(self, elements, probabilities):
-        self.elements = elements
-        self.probabilities = probabilities
-        
-        self.validate_lengths(elements, probabilities)
-        self.validate_probs(probabilities)
-        
-        
-        
-    def validate_lengths(self, elements, probs):
-        if (len(elements) != len(probs)):
-            raise ValueError('Elements and probilities arguments must be of the same length')
-            
-    def validate_probs(self, probs):
-        if(sum(probs) != 1):
-            raise ValueError('Probabilities must sum to 1')
-        
-    def sample(self):
-        return np.random.choice(self.elements, p=self.probabilities)
+
     
     
