@@ -4,10 +4,13 @@
 Created on Tue May 15 21:01:46 2018
 
 @author: tm3y13
+
+Notes: Common ramdom numbers for variance reduction?!!!
 """
 
 import itertools
 import numpy as np
+from scipy.stats import bernoulli
 
 
 from Results import ResultsSingleton
@@ -77,18 +80,21 @@ class ForecastED:
     
 
 
-class PatientSource:
+class PatientSource(object):
     """
     Arrival of patients to the ED.
     Patients are set a priority on arrival
     
     """
-    def __init__(self, env, mean_IAT, ed_cubicles, treat_proc, priority_dist):
+    def __init__(self, env, mean_IAT, 
+                 ed_cubicles, treat_proc, priority_dist, p_admit):
+        
         self.env = env
         self.mean_IAT = mean_IAT
         self.ed_cubicles = ed_cubicles
         self.treat_proc = treat_proc
         self.priority_dist = priority_dist
+        self.p_admit = p_admit
         self.count = 0
         
         
@@ -97,9 +103,21 @@ class PatientSource:
         for i in itertools.count():
             yield self.env.timeout(np.random.exponential(self.mean_IAT))
 
+            priority = self.priority_dist.sample()
             
-            patient = Patient(self.env, i, self.ed_cubicles, self.treat_proc, 
-                              self.priority_dist.sample())
+            if(bernoulli.rvs(self.p_admit[priority-1]) == 1):
+                patient = AdmittedPatient(self.env, i, 
+                                             self.ed_cubicles, 
+                                             self.treat_proc, 
+                                             priority
+                                             )
+            
+            else:
+                patient = NonAdmittedPatient(self.env, i, 
+                                             self.ed_cubicles, 
+                                             self.treat_proc, 
+                                             priority
+                                             )
             
             self.env.process(patient.execute())
             self.count += 1
@@ -108,7 +126,7 @@ class PatientSource:
         
         
 
-class EvaluationAndTreatment:
+class EvaluationAndTreatment(object):
     """Evaluation and treated is limited by the number
     of ED cubicles that are available"""
     def __init__(self, env, mu, sigma):
@@ -124,10 +142,41 @@ class EvaluationAndTreatment:
         treatment_duration= np.random.lognormal(self.mu, self.sigma)
             
         yield self.env.timeout(treatment_duration)
-            
 
 
-class Patient:
+
+        
+
+class Delay(object):
+    
+    def __init__(self, env, dist):
+        self.env = env
+        self.dist = dist
+        
+    
+    def execute(self):
+        """A patient undergoes treatment in a ED cubicle """   
+
+        self.on_enter()
+        yield self.env.timeout(self.dist.sample())      
+        self.on_exit()
+        
+        
+    def on_enter(self):
+        """
+        On enter logic.  Can be monkey patched as needed
+        """
+        pass
+    
+    def on_exit(self):
+        """
+        On exit logic. Can be monkey patched as needed.
+        """
+        pass
+    
+
+
+class NonAdmittedPatient(object):
     
     def __init__(self, env, identifer, ed_cubicles, treat_proc, priority=1):
         self.env = env
@@ -154,8 +203,7 @@ class Patient:
             self.cubicle_wait = self.env.now - start_wait
             ResultsSingleton().cubicle_waits.append(self.cubicle_wait)
             
-            trace('Patient {0}: starts treatment = {1} minutes;' 
-                  + 'wait = {2}'.format(self.identifer,self.env.now, 
+            trace('Patient {0}: starts treatment = {1} minutes; wait = {2}'.format(self.identifer,self.env.now, 
                             self.cubicle_wait))
             
             yield self.env.process(self.treat_proc.Treat())
@@ -163,6 +211,51 @@ class Patient:
             
             trace('Patient {0} leaves the ED at {1} minutes.'
                   .format(self.identifer, self.env.now))
+
+
+
+class AdmittedPatient(object):
+    
+    def __init__(self, env, identifer, ed_cubicles, treat_proc, priority=1):
+        self.env = env
+        self.arrival_time = env.now
+        self.identifer = identifer
+        self.ed_cubicles = ed_cubicles
+        self.treat_proc = treat_proc
+        self.priority = priority
+        
+        
+    def execute(self):
+        """A patient enteres the ED, waits for a treatment cubicle,
+        has treatment and then waits for admission"""    
+    
+        trace('Patient {0} enters the ED at {1}'.format(self.identifer, 
+              self.env.now))
+    
+        with self.ed_cubicles.request(priority=self.priority) as req:
+            start_wait = self.env.now
+            # Request one of the ed cubicles for treatment
+            yield req
+            
+            self.cubicle_wait = self.env.now - start_wait
+            
+            ResultsSingleton().cubicle_waits.append(self.cubicle_wait)
+            
+            trace('Patient {0}: starts treatment = {1} minutes; wait = {2}'.format(self.identifer, self.env.now, 
+                            self.cubicle_wait))
+            
+            yield self.env.process(self.treat_proc.Treat())
+            
+            
+            trace('Patient {0} begins waiting for admission at {1} minutes.'
+                  .format(self.identifer, self.env.now))
+            
+            yield self.env.timeout(45)   
+            
+            trace('Patient {0} admitted to hospital at {1} minutes.'
+                  .format(self.identifer, self.env.now))
+            
+            
 
 
 
@@ -196,6 +289,8 @@ def observe_service(env, res, interval, results):
        yield env.timeout(interval)
        trace('IN SERVICE: {0}'.format(len(res.users)))
        results.append(len(res.users))
+       
+       
        
 
 

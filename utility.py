@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 15 21:06:03 2018
+Utility class for sampling.
 
-@author: tm3y13
+Notes: Should I be worried about each object
+having its own psuedo random number stream?
+
 """
 
 import math
@@ -24,8 +26,25 @@ def normal_moments_from_lognormal(m, v):
     return mu, sigma
 
 
-
-    
+class lognormal_dist(object):
+    """
+    Encapsulates a lognormal distirbution
+    """
+    def __init__(self, mean, stdev):
+        """
+        @mean = mean of the lognormal distribution
+        @stdev = standard dev of the lognormal distribution
+        """
+        mu, sigma = normal_moments_from_lognormal(mean, stdev**2)
+        self.mu = mu
+        self.sigma = sigma
+        
+    def sample(self):
+        """
+        Sample from the normal distribution
+        """
+        return np.random.lognormal(self.mu, self.sigma)
+     
 
 
 class discrete_dist(object):

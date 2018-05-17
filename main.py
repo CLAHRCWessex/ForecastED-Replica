@@ -19,7 +19,7 @@ from utility import normal_moments_from_lognormal, discrete_dist
 #Experiment setup
 
 PRINT_TRACE = False
-REPLICATIONS = 5
+REPLICATIONS = 100
 
 FORECAST_HORIZON = 8
 RUN_TIME = 60*FORECAST_HORIZON
@@ -39,10 +39,12 @@ PRIORITY_ELEMENTS = [1, 2, 3, 4, 5]
 PRIORITY_PROBS = [0.2, 0.3, 0.3, 0.15, 0.05]
 
 
+#Prob patient is admitted (needs to be by triage category)
+ADMIT_PROBS = [0.03, 0.10, 0.2, 0.5, 0.9]
+
+
 MEAN_TREATMENT, SIGMA_TREATMENT = normal_moments_from_lognormal(MEAN_TREATMENT, 
                                                                 SIGMA_TREATMENT**2)
-
-
 
 def display_run_results(model):
     """
@@ -71,16 +73,18 @@ def multiple_replications(run_time, n):
     
         priority_dist = discrete_dist(PRIORITY_ELEMENTS, PRIORITY_PROBS)
     
-        source = fed.PatientSource(env, MEAN_IAT, ed_cubicles, 
-                                   treat_proc, priority_dist)
+        source = fed.PatientSource(env, 
+                                   MEAN_IAT, 
+                                   ed_cubicles, 
+                                   treat_proc, 
+                                   priority_dist,
+                                   ADMIT_PROBS)
         
         model = fed.ForecastED(env, source, ed_cubicles)
         model.run(RUN_TIME) 
         
         store_run_results(model, df_results, rep)
         
-    
-
     return df_results
 
 
@@ -108,6 +112,8 @@ def print_batch_results(df_results):
     df_kpi = pd.DataFrame(df_kpi.T.as_matrix(), index = df_kpi.T.index, columns=['Mean', 'LCI', 'UCI'])
     
     print(df_kpi)
+
+
 
 if __name__ == "__main__":
     
