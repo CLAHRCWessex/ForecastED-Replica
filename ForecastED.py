@@ -11,9 +11,12 @@ Notes: Common ramdom numbers for variance reduction?!!!
 import itertools
 import numpy as np
 from scipy.stats import bernoulli
+from numpy.random import binomial
 
 
 from Results import ResultsSingleton
+
+from utility import lognormal_dist
 
 _trace = True
 
@@ -105,7 +108,7 @@ class PatientSource(object):
 
             priority = self.priority_dist.sample()
             
-            if(bernoulli.rvs(self.p_admit[priority-1]) == 1):
+            if(binomial(1, self.p_admit[priority-1], 1)[0] == 1):
                 patient = AdmittedPatient(self.env, i, 
                                              self.ed_cubicles, 
                                              self.treat_proc, 
@@ -223,6 +226,7 @@ class AdmittedPatient(object):
         self.ed_cubicles = ed_cubicles
         self.treat_proc = treat_proc
         self.priority = priority
+        self.admit_delay = Delay(env, lognormal_dist(10, 10))
         
         
     def execute(self):
@@ -250,7 +254,7 @@ class AdmittedPatient(object):
             trace('Patient {0} begins waiting for admission at {1} minutes.'
                   .format(self.identifer, self.env.now))
             
-            yield self.env.timeout(45)   
+            yield self.env.process(self.admit_delay.execute())  
             
             trace('Patient {0} admitted to hospital at {1} minutes.'
                   .format(self.identifer, self.env.now))

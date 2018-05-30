@@ -10,6 +10,11 @@ having its own psuedo random number stream?
 
 import math
 import numpy as np
+from numpy.random import random_sample
+
+def weighted_values(elements, probs, size=1):
+    bins = np.add.accumulate(probs)
+    return elements[np.digitize(random_sample(size), bins)]
 
 def normal_moments_from_lognormal(m, v):
     """
@@ -69,6 +74,7 @@ class discrete_dist(object):
             raise ValueError('Probabilities must sum to 1')
         
     def sample(self):
-        return np.random.choice(self.elements, p=self.probabilities)
+        return weighted_values(self.elements, self.probabilities)[0]
+        #return np.random.choice(self.elements, p=self.probabilities)
 
 

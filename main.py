@@ -11,9 +11,13 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 import scipy.stats
+import cProfile
+import pstats
 
 import ForecastED as fed
-from utility import normal_moments_from_lognormal, discrete_dist
+from utility import discrete_dist
+
+DISPLAY_PROFILE = False
 
 
 #Experiment setup
@@ -34,17 +38,22 @@ SIGMA_TREATMENT = 2
 #arrival distibution parameters (exp)
 MEAN_IAT = 10
 
+
 #Priority distribution parameters
-PRIORITY_ELEMENTS = [1, 2, 3, 4, 5]
-PRIORITY_PROBS = [0.2, 0.3, 0.3, 0.15, 0.05]
+PRIORITY_ELEMENTS = np.array([1, 2, 3, 4, 5])
+PRIORITY_PROBS = np.array([0.2, 0.3, 0.3, 0.15, 0.05])
 
 
 #Prob patient is admitted (needs to be by triage category)
 ADMIT_PROBS = [0.03, 0.10, 0.2, 0.5, 0.9]
 
 
-MEAN_TREATMENT, SIGMA_TREATMENT = normal_moments_from_lognormal(MEAN_TREATMENT, 
-                                                                SIGMA_TREATMENT**2)
+MEAN_ADMIT_DELAY = 10
+STD_ADMIT_DELAYS = 5
+
+
+#MEAN_TREATMENT, SIGMA_TREATMENT = normal_moments_from_lognormal(MEAN_TREATMENT, 
+#                                                                SIGMA_TREATMENT**2)
 
 def display_run_results(model):
     """
@@ -114,15 +123,24 @@ def print_batch_results(df_results):
     print(df_kpi)
 
 
+def _run():
+    df_results = multiple_replications(RUN_TIME, REPLICATIONS)
+    if 1 < REPLICATIONS:
+        print_batch_results(df_results)
 
 if __name__ == "__main__":
     
     fed.set_trace(PRINT_TRACE)
-    df_results = multiple_replications(RUN_TIME, REPLICATIONS)
+    cProfile.run('_run()', filename = 'pr.txt')
     
-    print_batch_results(df_results)
+    if DISPLAY_PROFILE:
+        p = pstats.Stats('pr.txt')
+        p.sort_stats('cumulative').print_stats(30)
     
-    
+
+#to do:#
+# initial conditions of ED 
+# number of people in queue, number of people in service (how long etc...)
     
 
     
