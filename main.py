@@ -17,7 +17,7 @@ import pstats
 import ForecastED as fed
 from utility import discrete_dist
 
-DISPLAY_PROFILE = False
+DISPLAY_PROFILE = True
 
 
 #Experiment setup
@@ -38,7 +38,6 @@ SIGMA_TREATMENT = 2
 #arrival distibution parameters (exp)
 MEAN_IAT = 10
 
-
 #Priority distribution parameters
 PRIORITY_ELEMENTS = np.array([1, 2, 3, 4, 5])
 PRIORITY_PROBS = np.array([0.2, 0.3, 0.3, 0.15, 0.05])
@@ -52,8 +51,7 @@ MEAN_ADMIT_DELAY = 10
 STD_ADMIT_DELAYS = 5
 
 
-#MEAN_TREATMENT, SIGMA_TREATMENT = normal_moments_from_lognormal(MEAN_TREATMENT, 
-#                                                                SIGMA_TREATMENT**2)
+
 
 def display_run_results(model):
     """
@@ -63,20 +61,43 @@ def display_run_results(model):
         print(r)
     
     
-def store_run_results(model, df_results, rep):
+def store_run_results(model, a_results, rep):
+    """
+    Store current run results in a dataframe of all reps
+    Potentially this could be stored more efficiently.
+    numpy array?
+    """
+    
+    col = 0
+    
     for i in model.get_results().items():
-        df_results.loc[rep][i[0]] = i[1]
+        #df_results.loc[rep][i[0]] = i[1]
+        a_results[rep][col]  = i[1]
+        col += 1
+    
+    
+        
+        
+        
     
     
 def multiple_replications(run_time, n):
+    """
+    Run multiple replications of the model
+    https://stackoverflow.com/questions/45061369/simpy-how-to-run-a-simulation-multiple-times
+    https://bitbucket.org/simpy/simpy/issues/71/multiprocessing
+    """
     
-    df_results = init_results_df(n)
+    #df_results = init_results_df(n)
+    a_results = init_results_array(n)
     
     for rep in range(n):
         print('***** RUNNING REPLICATION {0}'.format(rep+1))
-        env = simpy.Environment()
+       
+        env, ed_cubicles = init_simpy()
         
-        ed_cubicles = simpy.PriorityResource(env, capacity=CUBICLE_N)
+    
+        
         treat_proc = fed.EvaluationAndTreatment(env, MEAN_TREATMENT, 
                                             SIGMA_TREATMENT)
     
@@ -92,16 +113,28 @@ def multiple_replications(run_time, n):
         model = fed.ForecastED(env, source, ed_cubicles)
         model.run(RUN_TIME) 
         
-        store_run_results(model, df_results, rep)
+        store_run_results(model, a_results, rep)
         
-    return df_results
+    return a_results
 
 
+def init_simpy():
+    env = simpy.Environment()
+    ed_cubicles = simpy.PriorityResource(env, capacity=CUBICLE_N)
+    return env, ed_cubicles
+    
+    
 def init_results_df(n):
     cols = ['Arrivals', 'Mean_Cubicle_Wait', 
             'Std_Cubicle_Wait', 'Mean_Cubicle_Q', 'Mean_Cubicle_Util']
     
+    
     return pd.DataFrame(index=np.arange(n), columns=cols)
+
+
+def init_results_array(n):   
+    return np.zeros(shape=(n,5))
+
     
 
 def mean_confidence_interval(data, confidence=0.95):
@@ -112,8 +145,14 @@ def mean_confidence_interval(data, confidence=0.95):
 
 
 
-def print_batch_results(df_results):
-    print('\n*** KPIs')
+def print_batch_results(a_results):
+   
+    print('\n*** KPIs from numpy')
+    
+    cols = ['Arrivals', 'Mean_Cubicle_Wait', 
+            'Std_Cubicle_Wait', 'Mean_Cubicle_Q', 'Mean_Cubicle_Util']
+    
+    df_results = pd.DataFrame(a_results, columns=cols)
     
     kpi = df_results.apply(lambda x: mean_confidence_interval(x), axis=0)
     
@@ -124,23 +163,33 @@ def print_batch_results(df_results):
 
 
 def _run():
-    df_results = multiple_replications(RUN_TIME, REPLICATIONS)
+    a_results = multiple_replications(RUN_TIME, REPLICATIONS)
+    
+    
+    #print(df_results)
+    #print(a_results)
+
     if 1 < REPLICATIONS:
-        print_batch_results(df_results)
+        print_batch_results(a_results)
+
+   
 
 if __name__ == "__main__":
-    
     fed.set_trace(PRINT_TRACE)
     cProfile.run('_run()', filename = 'pr.txt')
     
+    
     if DISPLAY_PROFILE:
         p = pstats.Stats('pr.txt')
-        p.sort_stats('cumulative').print_stats(30)
+        p.sort_stats('cumulative').print_stats(50)
     
 
 #to do:#
 # initial conditions of ED 
 # number of people in queue, number of people in service (how long etc...)
+        
+#to do - create a numpy array to store data in - compare this to the 
+#performance of pandas dataframe.
     
 
     
