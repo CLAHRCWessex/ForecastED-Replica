@@ -127,27 +127,7 @@ class PatientSource(object):
             ResultsSingleton().arrival_count += 1
         
         
-        
-
-class EvaluationAndTreatment(object):
-    """Evaluation and treated is limited by the number
-    of ED cubicles that are available"""
-    def __init__(self, env, mu, sigma):
-        self.env = env
-        self.mu = mu
-        self.sigma = sigma
-        
-    
-    def Treat(self):
-        """A patient undergoes treatment in a ED cubicle """   
-
-        # The reatment time
-        treatment_duration= np.random.lognormal(self.mu, self.sigma)
-            
-        yield self.env.timeout(treatment_duration)
-
-
-
+     
         
 
 class Delay(object):
@@ -209,7 +189,7 @@ class NonAdmittedPatient(object):
             trace('Patient {0}: starts treatment = {1} minutes; wait = {2}'.format(self.identifer,self.env.now, 
                             self.cubicle_wait))
             
-            yield self.env.process(self.treat_proc.Treat())
+            yield self.env.process(self.treat_proc.execute())
             
             
             trace('Patient {0} leaves the ED at {1} minutes.'
@@ -243,12 +223,14 @@ class AdmittedPatient(object):
             
             self.cubicle_wait = self.env.now - start_wait
             
+            #potentially expensive - is there a way to make this cheaper?
+            #would a running mean and stdev be more efficient? 
             ResultsSingleton().cubicle_waits.append(self.cubicle_wait)
             
             trace('Patient {0}: starts treatment = {1} minutes; wait = {2}'.format(self.identifer, self.env.now, 
                             self.cubicle_wait))
             
-            yield self.env.process(self.treat_proc.Treat())
+            yield self.env.process(self.treat_proc.execute())
             
             
             trace('Patient {0} begins waiting for admission at {1} minutes.'

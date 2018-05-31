@@ -15,7 +15,7 @@ import cProfile
 import pstats
 
 import ForecastED as fed
-from utility import discrete_dist
+from utility import discrete_dist, lognormal_dist
 
 DISPLAY_PROFILE = True
 
@@ -23,7 +23,7 @@ DISPLAY_PROFILE = True
 #Experiment setup
 
 PRINT_TRACE = False
-REPLICATIONS = 100
+REPLICATIONS = 1
 
 FORECAST_HORIZON = 8
 RUN_TIME = 60*FORECAST_HORIZON
@@ -45,7 +45,6 @@ PRIORITY_PROBS = np.array([0.2, 0.3, 0.3, 0.15, 0.05])
 
 #Prob patient is admitted (needs to be by triage category)
 ADMIT_PROBS = [0.03, 0.10, 0.2, 0.5, 0.9]
-
 
 MEAN_ADMIT_DELAY = 10
 STD_ADMIT_DELAYS = 5
@@ -93,17 +92,16 @@ def multiple_replications(run_time, n):
     
     priority_dist = discrete_dist(PRIORITY_ELEMENTS, PRIORITY_PROBS)
     
+    treatment_dist = lognormal_dist(MEAN_TREATMENT, SIGMA_TREATMENT)
+    
     for rep in range(n):
         print('***** RUNNING REPLICATION {0}'.format(rep+1))
        
         env, ed_cubicles = init_simpy()
+
         
+        treat_proc = fed.Delay(env, treatment_dist)
     
-        
-        treat_proc = fed.EvaluationAndTreatment(env, MEAN_TREATMENT, 
-                                            SIGMA_TREATMENT)
-    
-        
         source = fed.PatientSource(env, 
                                    MEAN_IAT, 
                                    ed_cubicles, 
