@@ -13,7 +13,7 @@ import numpy as np
 from numpy.random import binomial
 
 from forecast_ed.results import ResultsSingleton
-from forecast_ed.utility import lognormal_dist
+from forecast_ed.sampling import lognormal_dist
 
 _trace = True
 

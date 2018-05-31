@@ -15,7 +15,7 @@ import cProfile
 import pstats
 
 import forecast_ed.model as mod
-from forecast_ed.utility import discrete_dist, lognormal_dist
+from forecast_ed.sampling import discrete_dist, lognormal_dist
 
 DISPLAY_PROFILE = True
 
@@ -23,7 +23,7 @@ DISPLAY_PROFILE = True
 #Experiment setup
 
 PRINT_TRACE = False
-REPLICATIONS = 100
+REPLICATIONS = 10
 
 FORECAST_HORIZON = 8
 RUN_TIME = 60*FORECAST_HORIZON
