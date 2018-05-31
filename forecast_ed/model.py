@@ -12,10 +12,8 @@ import itertools
 import numpy as np
 from numpy.random import binomial
 
-
-from Results import ResultsSingleton
-
-from utility import lognormal_dist
+from forecast_ed.results import ResultsSingleton
+from forecast_ed.utility import lognormal_dist
 
 _trace = True
 
@@ -56,6 +54,8 @@ class ForecastED:
         ResultsSingleton().cubicle_queue = []
         ResultsSingleton().cubicle_service = []
         
+        ResultsSingleton().mean_cubicle_wait = 0
+        ResultsSingleton().sum_cubicle_wait = 0
     
         
     
@@ -72,6 +72,7 @@ class ForecastED:
     def process_run_results(self):
         self.run_results['Arrivals'] = ResultsSingleton().arrival_count
         self.run_results['Mean_Cubicle_Wait'] = np.array(ResultsSingleton().cubicle_waits).mean()
+        #self.run_results['Mean_Cubicle_Wait'] = ResultsSingleton().sum_cubicle_wait / ResultsSingleton().arrival_count
         self.run_results['Std_Cubicle_Wait'] = np.array(ResultsSingleton().cubicle_waits).std()
         self.run_results['Mean_Cubicle_Q'] = np.array(ResultsSingleton().cubicle_queue).mean()
         self.run_results['Mean_Cubicle_Util'] = np.array(ResultsSingleton().cubicle_service).mean() / self.ed_cubicles.capacity
@@ -97,7 +98,7 @@ class PatientSource(object):
         self.treat_proc = treat_proc
         self.priority_dist = priority_dist
         self.p_admit = p_admit
-        self.count = 0
+        
         
         
     def generate(self):
@@ -122,7 +123,6 @@ class PatientSource(object):
                                              )
             
             self.env.process(patient.execute())
-            self.count += 1
             ResultsSingleton().arrival_count += 1
         
         
@@ -184,6 +184,8 @@ class NonAdmittedPatient(object):
             
             self.cubicle_wait = self.env.now - start_wait
             ResultsSingleton().cubicle_waits.append(self.cubicle_wait)
+            #ResultsSingleton().sum_cubicle_wait += self.cubicle_wait
+            
             
             trace('Patient {0}: starts treatment = {1} minutes; wait = {2}'.format(self.identifer,self.env.now, 
                             self.cubicle_wait))
@@ -225,6 +227,7 @@ class AdmittedPatient(object):
             #potentially expensive - is there a way to make this cheaper?
             #would a running mean and stdev be more efficient? 
             ResultsSingleton().cubicle_waits.append(self.cubicle_wait)
+            #ResultsSingleton().sum_cubicle_wait += self.cubicle_wait
             
             trace('Patient {0}: starts treatment = {1} minutes; wait = {2}'.format(self.identifer, self.env.now, 
                             self.cubicle_wait))

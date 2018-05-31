@@ -14,8 +14,8 @@ import scipy.stats
 import cProfile
 import pstats
 
-import ForecastED as fed
-from utility import discrete_dist, lognormal_dist
+import forecast_ed.model as mod
+from forecast_ed.utility import discrete_dist, lognormal_dist
 
 DISPLAY_PROFILE = True
 
@@ -100,16 +100,16 @@ def multiple_replications(run_time, n):
         env, ed_cubicles = init_simpy()
 
         
-        treat_proc = fed.Delay(env, treatment_dist)
+        treat_proc = mod.Delay(env, treatment_dist)
     
-        source = fed.PatientSource(env, 
+        source = mod.PatientSource(env, 
                                    MEAN_IAT, 
                                    ed_cubicles, 
                                    treat_proc, 
                                    priority_dist,
                                    ADMIT_PROBS)
         
-        model = fed.ForecastED(env, source, ed_cubicles)
+        model = mod.ForecastED(env, source, ed_cubicles)
         model.run(RUN_TIME) 
         
         store_run_results(model, a_results, rep)
@@ -163,10 +163,7 @@ def print_batch_results(a_results):
 
 def _run():
     a_results = multiple_replications(RUN_TIME, REPLICATIONS)
-    
-    
-    #print(df_results)
-    #print(a_results)
+
 
     if 1 < REPLICATIONS:
         print_batch_results(a_results)
@@ -174,13 +171,13 @@ def _run():
    
 
 if __name__ == "__main__":
-    fed.set_trace(PRINT_TRACE)
+    mod.set_trace(PRINT_TRACE)
     cProfile.run('_run()', filename = 'pr.txt')
     
     
     if DISPLAY_PROFILE:
         p = pstats.Stats('pr.txt')
-        p.sort_stats('cumulative').print_stats(50)
+        p.sort_stats('cumulative').print_stats(70)
     
 
 #to do:#
