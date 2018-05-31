@@ -10,7 +10,6 @@ Notes: Common ramdom numbers for variance reduction?!!!
 
 import itertools
 import numpy as np
-from scipy.stats import bernoulli
 from numpy.random import binomial
 
 
@@ -63,8 +62,8 @@ class ForecastED:
     def run(self, runtime):
         
         self.env.process(self.source.generate())
-        self.env.process(observe_queue(self.env, self.ed_cubicles, 10, ResultsSingleton().cubicle_queue)) 
-        self.env.process(observe_service(self.env, self.ed_cubicles, 10, ResultsSingleton().cubicle_service))  
+        self.env.process(observe_queue(self.env, self.ed_cubicles, 120, ResultsSingleton().cubicle_queue)) 
+        self.env.process(observe_service(self.env, self.ed_cubicles, 120, ResultsSingleton().cubicle_service))  
         self.env.run(until=runtime)
         
         self.process_run_results()
@@ -257,8 +256,9 @@ def observe_queue(env, res, interval, results):
    """
    for i in itertools.count():
        yield env.timeout(interval)
-       trace('QUEUE LENGTH: {0}'.format(len(res.queue)))
-       results.append(len(res.queue))
+       queue_l = len(res.queue)
+       trace('QUEUE LENGTH: {0}'.format(queue_l))
+       results.append(queue_l)
        
 
 def observe_service(env, res, interval, results):
@@ -273,8 +273,9 @@ def observe_service(env, res, interval, results):
    """
    for i in itertools.count():
        yield env.timeout(interval)
-       trace('IN SERVICE: {0}'.format(len(res.users)))
-       results.append(len(res.users))
+       users = len(res.users)
+       trace('IN SERVICE: {0}'.format(users))
+       results.append(users)
        
        
        
