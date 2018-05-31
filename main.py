@@ -91,6 +91,8 @@ def multiple_replications(run_time, n):
     #df_results = init_results_df(n)
     a_results = init_results_array(n)
     
+    priority_dist = discrete_dist(PRIORITY_ELEMENTS, PRIORITY_PROBS)
+    
     for rep in range(n):
         print('***** RUNNING REPLICATION {0}'.format(rep+1))
        
@@ -101,8 +103,7 @@ def multiple_replications(run_time, n):
         treat_proc = fed.EvaluationAndTreatment(env, MEAN_TREATMENT, 
                                             SIGMA_TREATMENT)
     
-        priority_dist = discrete_dist(PRIORITY_ELEMENTS, PRIORITY_PROBS)
-    
+        
         source = fed.PatientSource(env, 
                                    MEAN_IAT, 
                                    ed_cubicles, 

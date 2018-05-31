@@ -12,9 +12,9 @@ import math
 import numpy as np
 from numpy.random import random_sample
 
-def weighted_values(elements, probs, size=1):
-    bins = np.add.accumulate(probs)
-    return elements[np.digitize(random_sample(size), bins)]
+def weighted_values(elements, cum_probs, size=1):
+    
+    return elements[np.digitize(random_sample(size), cum_probs)]
 
 def normal_moments_from_lognormal(m, v):
     """
@@ -63,6 +63,7 @@ class discrete_dist(object):
         self.validate_lengths(elements, probabilities)
         self.validate_probs(probabilities)
         
+        self.cum_probs = np.add.accumulate(probabilities)
         
         
     def validate_lengths(self, elements, probs):
@@ -74,7 +75,7 @@ class discrete_dist(object):
             raise ValueError('Probabilities must sum to 1')
         
     def sample(self):
-        return weighted_values(self.elements, self.probabilities)[0]
+        return weighted_values(self.elements, self.cum_probs)[0]
         #return np.random.choice(self.elements, p=self.probabilities)
 
 
