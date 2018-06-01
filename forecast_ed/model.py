@@ -29,7 +29,7 @@ def trace(msg):
 
 
 
-class ForecastED:
+class ForecastED(object):
     """
     ForecastED model
     """

@@ -99,7 +99,6 @@ def multiple_replications(run_time, n):
        
         env, ed_cubicles = init_simpy()
 
-        
         treat_proc = mod.Delay(env, treatment_dist)
     
         source = mod.PatientSource(env, 
